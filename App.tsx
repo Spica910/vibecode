@@ -14,6 +14,8 @@ import AgentSettingsScreen from './src/screens/AgentSettingsScreen';
 import SkillSettingsScreen from './src/screens/SkillSettingsScreen';
 import TermuxSettingsScreen from './src/screens/TermuxSettingsScreen';
 import TerminalWebViewScreen from './src/screens/TerminalWebViewScreen';
+import GitCloneScreen from './src/screens/GitCloneScreen';
+import GitManageScreen from './src/screens/GitManageScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -78,6 +80,16 @@ const App = () => {
                   backgroundColor: '#1e1e1e',
                 },
               }}
+            />
+            <Stack.Screen
+              name="GitClone"
+              component={GitCloneScreen}
+              options={{ title: 'Git 저장소 클론' }}
+            />
+            <Stack.Screen
+              name="GitManage"
+              component={GitManageScreen}
+              options={{ title: 'Git 관리' }}
             />
           </Stack.Navigator>
         </NavigationContainer>

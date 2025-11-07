@@ -163,6 +163,12 @@ const ProjectListScreen: React.FC<Props> = ({ navigation }) => {
       />
 
       <TouchableOpacity
+        style={styles.fabClone}
+        onPress={() => navigation.navigate('GitClone')}>
+        <Text style={styles.fabCloneText}>🔽</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         style={styles.fab}
         onPress={() => setModalVisible(true)}>
         <Text style={styles.fabText}>+</Text>
@@ -288,6 +294,26 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#bbb',
+  },
+  fabClone: {
+    position: 'absolute',
+    right: 24,
+    bottom: 96,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007acc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  fabCloneText: {
+    fontSize: 28,
+    color: '#fff',
   },
   fab: {
     position: 'absolute',

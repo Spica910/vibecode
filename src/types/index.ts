@@ -65,4 +65,6 @@ export type RootStackParamList = {
   SkillSettings: { projectId: string };
   TermuxSettings: undefined;
   Terminal: { projectId?: string; cwd?: string };
+  GitClone: undefined;
+  GitManage: { project: Project };
 };

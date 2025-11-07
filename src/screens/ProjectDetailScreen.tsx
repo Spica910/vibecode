@@ -139,6 +139,14 @@ This is a development project managed with Claude Code.
       onInit: () => {},
     },
     {
+      title: 'Git 관리',
+      description: 'Git commit, push, pull 등을 관리합니다',
+      icon: '🔄',
+      available: true,
+      onPress: () => navigation.navigate('GitManage', { project }),
+      onInit: () => {},
+    },
+    {
       title: 'Claude.md 편집',
       description: 'Claude 설정 파일을 편집합니다',
       icon: '📝',
