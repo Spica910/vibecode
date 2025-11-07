@@ -9,11 +9,13 @@ import {
   Modal,
   TextInput,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, Agent, Project } from '../types';
 import { StorageService } from '../utils/storage';
+import { ClaudeCodeService } from '../utils/claudeCode';
 
 type AgentSettingsScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -31,108 +33,225 @@ interface Props {
 
 const DEFAULT_AGENTS: Agent[] = [
   {
-    name: 'Code Review Agent',
-    description: '코드 리뷰를 수행하는 에이전트',
+    name: 'code-reviewer',
+    description: 'Reviews code for best practices and potential issues',
     enabled: false,
+    config: {
+      trigger: 'on_commit',
+      model: 'claude-3-sonnet'
+    }
   },
   {
-    name: 'Test Generator',
-    description: '테스트 코드를 자동으로 생성',
+    name: 'test-generator',
+    description: 'Automatically generates test cases',
     enabled: false,
+    config: {
+      trigger: 'manual',
+      model: 'claude-3-sonnet'
+    }
   },
   {
-    name: 'Documentation Agent',
-    description: '문서를 자동으로 생성하고 업데이트',
+    name: 'documentation-agent',
+    description: 'Generates and updates documentation',
     enabled: false,
+    config: {
+      trigger: 'manual',
+      model: 'claude-3-sonnet'
+    }
   },
   {
-    name: 'Bug Hunter',
-    description: '잠재적 버그를 찾아내는 에이전트',
+    name: 'bug-hunter',
+    description: 'Finds potential bugs and vulnerabilities',
     enabled: false,
+    config: {
+      trigger: 'on_commit',
+      model: 'claude-3-sonnet'
+    }
   },
 ];
 
 const AgentSettingsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [agentName, setAgentName] = useState('');
   const [agentDescription, setAgentDescription] = useState('');
+  const [agentTrigger, setAgentTrigger] = useState('manual');
 
   useEffect(() => {
-    loadAgents();
+    loadProject();
   }, []);
 
-  const loadAgents = async () => {
-    const loadedAgents = await StorageService.getAgents(projectId);
-    if (loadedAgents.length === 0) {
-      setAgents(DEFAULT_AGENTS);
-      await StorageService.saveAgents(projectId, DEFAULT_AGENTS);
-    } else {
-      setAgents(loadedAgents);
+  const loadProject = async () => {
+    try {
+      setLoading(true);
+      const projects = await StorageService.getProjects();
+      const found = projects.find(p => p.id === projectId);
+
+      if (found) {
+        setProject(found);
+        await loadAgents(found.path);
+      } else {
+        Alert.alert('오류', '프로젝트를 찾을 수 없습니다.');
+        navigation.goBack();
+      }
+    } catch (error) {
+      Alert.alert('오류', '프로젝트 로드에 실패했습니다.');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAgents = async (projectPath: string) => {
+    try {
+      // 먼저 .claude 디렉토리 초기화
+      await ClaudeCodeService.initializeClaudeDirectory(projectPath);
+
+      // Agent 로드
+      const loadedAgents = await ClaudeCodeService.getAgents(projectPath);
+
+      if (loadedAgents.length === 0) {
+        // 기본 Agent 생성
+        for (const defaultAgent of DEFAULT_AGENTS) {
+          await ClaudeCodeService.saveAgent(projectPath, defaultAgent);
+        }
+        setAgents(DEFAULT_AGENTS);
+      } else {
+        setAgents(loadedAgents);
+      }
+
+      // 프로젝트 상태 업데이트
+      await StorageService.updateProject(projectId, { hasAgents: true });
+    } catch (error) {
+      Alert.alert('오류', 'Agent 로드에 실패했습니다.');
+      console.error(error);
     }
   };
 
   const handleToggleAgent = async (index: number) => {
-    const updatedAgents = [...agents];
-    updatedAgents[index].enabled = !updatedAgents[index].enabled;
-    setAgents(updatedAgents);
-    await StorageService.saveAgents(projectId, updatedAgents);
+    if (!project) return;
+
+    try {
+      const updatedAgents = [...agents];
+      updatedAgents[index].enabled = !updatedAgents[index].enabled;
+
+      // 파일 시스템에 저장
+      await ClaudeCodeService.saveAgent(project.path, updatedAgents[index]);
+
+      setAgents(updatedAgents);
+      Alert.alert(
+        '성공',
+        `Agent "${updatedAgents[index].name}" ${updatedAgents[index].enabled ? '활성화' : '비활성화'}되었습니다.`
+      );
+    } catch (error) {
+      Alert.alert('오류', 'Agent 토글에 실패했습니다.');
+      console.error(error);
+    }
   };
 
   const handleAddAgent = () => {
-    setEditingAgent(null);
+    setEditingIndex(null);
     setAgentName('');
     setAgentDescription('');
+    setAgentTrigger('manual');
     setModalVisible(true);
   };
 
   const handleEditAgent = (agent: Agent, index: number) => {
-    setEditingAgent({ ...agent, config: { index } });
+    setEditingIndex(index);
     setAgentName(agent.name);
     setAgentDescription(agent.description);
+    setAgentTrigger(agent.config?.trigger || 'manual');
     setModalVisible(true);
   };
 
   const handleSaveAgent = async () => {
+    if (!project) return;
+
     if (!agentName.trim()) {
       Alert.alert('오류', 'Agent 이름을 입력해주세요.');
       return;
     }
 
+    // 이름은 kebab-case로 변환
+    const normalizedName = agentName.toLowerCase().replace(/\s+/g, '-');
+
     const newAgent: Agent = {
-      name: agentName,
+      name: normalizedName,
       description: agentDescription,
       enabled: false,
+      config: {
+        trigger: agentTrigger,
+        model: 'claude-3-sonnet'
+      }
     };
 
-    let updatedAgents: Agent[];
-    if (editingAgent && editingAgent.config?.index !== undefined) {
-      updatedAgents = [...agents];
-      updatedAgents[editingAgent.config.index] = newAgent;
-    } else {
-      updatedAgents = [...agents, newAgent];
-    }
+    try {
+      let updatedAgents: Agent[];
 
-    setAgents(updatedAgents);
-    await StorageService.saveAgents(projectId, updatedAgents);
-    setModalVisible(false);
+      if (editingIndex !== null) {
+        // 기존 Agent 수정
+        const oldName = agents[editingIndex].name;
+
+        // 이름이 변경되었으면 기존 파일 삭제
+        if (oldName !== normalizedName) {
+          await ClaudeCodeService.deleteAgent(project.path, oldName);
+        }
+
+        updatedAgents = [...agents];
+        updatedAgents[editingIndex] = newAgent;
+      } else {
+        // 새 Agent 추가
+        updatedAgents = [...agents, newAgent];
+      }
+
+      // 파일 시스템에 저장
+      await ClaudeCodeService.saveAgent(project.path, newAgent);
+
+      setAgents(updatedAgents);
+      setModalVisible(false);
+
+      Alert.alert('성공', `Agent "${newAgent.name}"이(가) 저장되었습니다.\n파일: .claude/agents/${normalizedName}.json`);
+    } catch (error) {
+      Alert.alert('오류', 'Agent 저장에 실패했습니다.');
+      console.error(error);
+    }
   };
 
   const handleDeleteAgent = (index: number) => {
-    Alert.alert('Agent 삭제', '이 Agent를 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: async () => {
-          const updatedAgents = agents.filter((_, i) => i !== index);
-          setAgents(updatedAgents);
-          await StorageService.saveAgents(projectId, updatedAgents);
+    if (!project) return;
+
+    const agent = agents[index];
+
+    Alert.alert(
+      'Agent 삭제',
+      `"${agent.name}" Agent를 삭제하시겠습니까?\n파일이 영구적으로 삭제됩니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // 파일 시스템에서 삭제
+              await ClaudeCodeService.deleteAgent(project.path, agent.name);
+
+              const updatedAgents = agents.filter((_, i) => i !== index);
+              setAgents(updatedAgents);
+
+              Alert.alert('성공', `Agent "${agent.name}"이(가) 삭제되었습니다.`);
+            } catch (error) {
+              Alert.alert('오류', 'Agent 삭제에 실패했습니다.');
+              console.error(error);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const renderAgent = ({ item, index }: { item: Agent; index: number }) => (
@@ -144,6 +263,9 @@ const AgentSettingsScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.agentInfo}>
           <Text style={styles.agentName}>{item.name}</Text>
           <Text style={styles.agentDescription}>{item.description}</Text>
+          <Text style={styles.agentTrigger}>
+            Trigger: {item.config?.trigger || 'manual'}
+          </Text>
         </View>
       </TouchableOpacity>
       <Switch
@@ -155,11 +277,20 @@ const AgentSettingsScreen: React.FC<Props> = ({ navigation, route }) => {
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6200ee" />
+        <Text style={styles.loadingText}>Loading agents...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>
-          Agent를 활성화하여 자동화된 작업을 수행하세요
+          Agent 파일은 .claude/agents/*.json에 저장됩니다
         </Text>
       </View>
 
@@ -190,7 +321,7 @@ const AgentSettingsScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {editingAgent ? 'Agent 편집' : '새 Agent 추가'}
+              {editingIndex !== null ? 'Agent 편집' : '새 Agent 추가'}
             </Text>
 
             <Text style={styles.inputLabel}>Agent 이름</Text>
@@ -198,8 +329,10 @@ const AgentSettingsScreen: React.FC<Props> = ({ navigation, route }) => {
               style={styles.input}
               value={agentName}
               onChangeText={setAgentName}
-              placeholder="Code Review Agent"
+              placeholder="code-reviewer"
+              placeholderTextColor="#999"
             />
+            <Text style={styles.hint}>kebab-case로 변환됩니다 (예: Code Review → code-review)</Text>
 
             <Text style={styles.inputLabel}>설명</Text>
             <TextInput
@@ -207,9 +340,35 @@ const AgentSettingsScreen: React.FC<Props> = ({ navigation, route }) => {
               value={agentDescription}
               onChangeText={setAgentDescription}
               placeholder="이 Agent가 하는 일을 설명하세요"
+              placeholderTextColor="#999"
               multiline
               numberOfLines={4}
             />
+
+            <Text style={styles.inputLabel}>Trigger</Text>
+            <View style={styles.triggerButtons}>
+              <TouchableOpacity
+                style={[styles.triggerButton, agentTrigger === 'manual' && styles.triggerButtonActive]}
+                onPress={() => setAgentTrigger('manual')}>
+                <Text style={[styles.triggerButtonText, agentTrigger === 'manual' && styles.triggerButtonTextActive]}>
+                  Manual
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.triggerButton, agentTrigger === 'on_commit' && styles.triggerButtonActive]}
+                onPress={() => setAgentTrigger('on_commit')}>
+                <Text style={[styles.triggerButtonText, agentTrigger === 'on_commit' && styles.triggerButtonTextActive]}>
+                  On Commit
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.triggerButton, agentTrigger === 'on_save' && styles.triggerButtonActive]}
+                onPress={() => setAgentTrigger('on_save')}>
+                <Text style={[styles.triggerButtonText, agentTrigger === 'on_save' && styles.triggerButtonTextActive]}>
+                  On Save
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -221,7 +380,7 @@ const AgentSettingsScreen: React.FC<Props> = ({ navigation, route }) => {
                 style={[styles.button, styles.buttonSave]}
                 onPress={handleSaveAgent}>
                 <Text style={[styles.buttonText, styles.buttonTextSave]}>
-                  {editingAgent ? '수정' : '추가'}
+                  {editingIndex !== null ? '수정' : '추가'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -237,6 +396,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
   header: {
     backgroundColor: '#fff',
     padding: 16,
@@ -244,7 +414,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ddd',
   },
   headerText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     textAlign: 'center',
   },
@@ -280,6 +450,12 @@ const styles = StyleSheet.create({
   agentDescription: {
     fontSize: 12,
     color: '#666',
+    marginBottom: 4,
+  },
+  agentTrigger: {
+    fontSize: 10,
+    color: '#999',
+    fontStyle: 'italic',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -352,6 +528,38 @@ const styles = StyleSheet.create({
   inputMultiline: {
     height: 100,
     textAlignVertical: 'top',
+  },
+  hint: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  triggerButtons: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  triggerButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  triggerButtonActive: {
+    backgroundColor: '#6200ee',
+    borderColor: '#6200ee',
+  },
+  triggerButtonText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  triggerButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   modalButtons: {
     flexDirection: 'row',
