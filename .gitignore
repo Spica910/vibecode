@@ -1,0 +1,41 @@
+# OSX
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# React Native
+.expo/
+.expo-shared/
+
+# Android
+android/.gradle
+android/app/build
+android/build
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+*.hprof
+
+# iOS (for future)
+ios/Pods/
+ios/**/*.xcworkspace
+Podfile.lock
+
+# Misc
+.env
+.env.local
+.vscode/
+*.log
