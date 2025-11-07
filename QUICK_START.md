@@ -1,8 +1,46 @@
 # VibeCode 빠른 시작 가이드
 
-VibeCode를 Galaxy Tab의 Termux에서 실행하는 방법을 안내합니다.
+VibeCode를 Galaxy Tab에서 실행하는 방법을 안내합니다.
 
-## 📱 Termux에서 설치 및 실행
+## 🎯 가장 쉬운 방법: GitHub Actions로 APK 다운로드
+
+**빌드 없이 바로 설치하세요!**
+
+### APK 다운로드 방법
+
+1. **GitHub 저장소 방문**
+   - https://github.com/Spica910/vibecode
+
+2. **Actions 탭 클릭**
+   - 상단 메뉴에서 "Actions" 선택
+
+3. **최신 빌드 선택**
+   - "Build Android APK" 워크플로우 클릭
+   - 가장 최근 성공한 빌드(초록색 체크마크) 선택
+
+4. **APK 다운로드**
+   - 하단 "Artifacts" 섹션에서:
+     - `app-debug` - 디버그 APK (권장, 설치 쉬움)
+     - `app-release` - 릴리스 APK (최적화됨)
+   - ZIP 파일 다운로드 후 압축 해제
+
+5. **APK 설치**
+   - Galaxy Tab에서 다운로드한 `.apk` 파일 탭
+   - "설치" 버튼 클릭
+
+### 수동으로 새 APK 빌드하기
+
+최신 코드로 새로운 APK가 필요한 경우:
+
+1. **Actions 탭** → "Build Android APK" 워크플로우
+2. **"Run workflow"** 버튼 클릭
+3. 브랜치 선택 (기본: `claude/android-termux-setup-011CUsc53RvhCRLRWo8u63az`)
+4. **"Run workflow"** 클릭
+5. 5-10분 대기 후 Artifacts에서 다운로드
+
+---
+
+## 📱 Termux에서 직접 빌드 (고급 사용자)
 
 ### 1단계: Termux 설치 및 준비
 

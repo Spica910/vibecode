@@ -29,7 +29,23 @@ VibeCode는 Galaxy Tab과 Termux 환경에서 Claude Code 프로젝트를 편리
 
 ## 🚀 빠른 시작
 
-### Termux에서 5분 만에 시작하기
+### 방법 1: GitHub Actions로 APK 다운로드 (가장 쉬움!)
+
+빌드 없이 바로 사용 가능한 APK를 다운로드하세요:
+
+1. **GitHub Repository 방문**: https://github.com/Spica910/vibecode
+2. **Actions 탭** 클릭
+3. 최신 성공한 워크플로우 선택
+4. **Artifacts** 섹션에서 다운로드:
+   - `app-debug.apk` - 디버그 버전 (권장)
+   - `app-release.apk` - 릴리스 버전
+
+또는 **수동으로 빌드 트리거**:
+1. Actions 탭 → "Build Android APK" 선택
+2. "Run workflow" 버튼 클릭
+3. 빌드 완료 후 Artifacts 다운로드
+
+### 방법 2: Termux에서 직접 빌드
 
 ```bash
 # 1. 필수 패키지 설치
