@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VibeCode Terminal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1e1e1e;
+      font-family: 'Consolas', 'Courier New', monospace;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    #terminal {
+      width: 100%;
+      height: 100vh;
+      padding: 10px;
+    }
+
+    .xterm {
+      height: 100%;
+    }
+
+    .xterm-viewport {
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+  <script>
+    // Initialize xterm.js
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily: 'Consolas, Courier New, monospace',
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#cccccc',
+        cursor: '#cccccc',
+        black: '#000000',
+        red: '#cd3131',
+        green: '#0dbc79',
+        yellow: '#e5e510',
+        blue: '#2472c8',
+        magenta: '#bc3fbc',
+        cyan: '#11a8cd',
+        white: '#e5e5e5',
+        brightBlack: '#666666',
+        brightRed: '#f14c4c',
+        brightGreen: '#23d18b',
+        brightYellow: '#f5f543',
+        brightBlue: '#3b8eea',
+        brightMagenta: '#d670d6',
+        brightCyan: '#29b8db',
+        brightWhite: '#e5e5e5'
+      },
+      rows: 30,
+      cols: 80
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+
+    term.open(document.getElementById('terminal'));
+    fitAddon.fit();
+
+    // Command history
+    let commandHistory = [];
+    let historyIndex = -1;
+    let currentCommand = '';
+    let currentLine = 0;
+
+    // Welcome message
+    term.writeln('\x1b[1;36mVibeCode Terminal\x1b[0m');
+    term.writeln('Type \x1b[1;32mhelp\x1b[0m for available commands\n');
+
+    // Prompt
+    let cwd = '/data/data/com.termux/files/home';
+    function writePrompt() {
+      term.write('\x1b[1;32m$\x1b[0m ');
+    }
+    writePrompt();
+
+    // Handle input
+    term.onData(data => {
+      const code = data.charCodeAt(0);
+
+      // Enter key
+      if (code === 13) {
+        term.write('\r\n');
+
+        if (currentCommand.trim()) {
+          commandHistory.push(currentCommand);
+          historyIndex = -1;
+
+          // Send command to React Native
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'command',
+            command: currentCommand,
+            cwd: cwd
+          }));
+
+          currentCommand = '';
+        } else {
+          writePrompt();
+        }
+      }
+      // Backspace
+      else if (code === 127) {
+        if (currentCommand.length > 0) {
+          currentCommand = currentCommand.slice(0, -1);
+          term.write('\b \b');
+        }
+      }
+      // Up arrow - previous command
+      else if (data === '\x1b[A') {
+        if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+          historyIndex++;
+          // Clear current line
+          term.write('\r\x1b[K');
+          writePrompt();
+          currentCommand = commandHistory[commandHistory.length - 1 - historyIndex];
+          term.write(currentCommand);
+        }
+      }
+      // Down arrow - next command
+      else if (data === '\x1b[B') {
+        if (historyIndex > 0) {
+          historyIndex--;
+          term.write('\r\x1b[K');
+          writePrompt();
+          currentCommand = commandHistory[commandHistory.length - 1 - historyIndex];
+          term.write(currentCommand);
+        } else if (historyIndex === 0) {
+          historyIndex = -1;
+          term.write('\r\x1b[K');
+          writePrompt();
+          currentCommand = '';
+        }
+      }
+      // Regular characters
+      else if (code >= 32 && code < 127) {
+        currentCommand += data;
+        term.write(data);
+      }
+    });
+
+    // Handle messages from React Native
+    window.addEventListener('message', event => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === 'output') {
+        term.write(message.data);
+        if (!message.data.endsWith('\n')) {
+          term.writeln('');
+        }
+        writePrompt();
+      } else if (message.type === 'error') {
+        term.writeln('\x1b[1;31m' + message.data + '\x1b[0m');
+        writePrompt();
+      } else if (message.type === 'cwd') {
+        cwd = message.data;
+      } else if (message.type === 'clear') {
+        term.clear();
+        writePrompt();
+      }
+    });
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+      fitAddon.fit();
+    });
+
+    // Ready message
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: 'ready'
+    }));
+  </script>
+</body>
+</html>
