@@ -7,10 +7,11 @@ VibeCode는 갤럭시 탭과 Termux 환경에서 Claude Code를 더 쉽게 사�
 ## 주요 기능
 
 - **프로젝트 관리**: Claude Code 프로젝트를 한 곳에서 관리
+- **내장 터미널**: VS Code 스타일의 통합 터미널 (Termux 별도 설치 불필요!)
 - **Claude.md 편집기**: 프로젝트별 Claude 설정 파일 편집
 - **Agent 설정**: Agent를 활성화하고 관리
 - **Skills 설정**: 커스텀 명령어(Skills) 설정
-- **Termux 통합**: Termux 환경 설정 및 관리
+- **Shell 명령 실행**: 네이티브 Android 셸을 통한 직접 명령 실행
 
 ## 기술 스택
 
@@ -19,6 +20,8 @@ VibeCode는 갤럭시 탭과 Termux 환경에서 Claude Code를 더 쉽게 사�
 - React Navigation
 - AsyncStorage
 - React Native FS
+- WebView (터미널 UI)
+- Native Shell Module (Java)
 
 ## Termux에서 빌드하기
 

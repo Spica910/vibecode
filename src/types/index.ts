@@ -37,6 +37,25 @@ export interface TermuxConfig {
   gitPath?: string;
 }
 
+export interface TerminalSession {
+  id: string;
+  projectId?: string;
+  cwd: string;
+  createdAt: Date;
+  active: boolean;
+}
+
+export interface ShellCommand {
+  command: string;
+  cwd: string;
+}
+
+export interface ShellOutput {
+  output: string;
+  exitCode: number;
+  error?: string;
+}
+
 export type RootStackParamList = {
   Home: undefined;
   ProjectList: undefined;
@@ -45,4 +64,5 @@ export type RootStackParamList = {
   AgentSettings: { projectId: string };
   SkillSettings: { projectId: string };
   TermuxSettings: undefined;
+  Terminal: { projectId?: string; cwd?: string };
 };

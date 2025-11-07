@@ -13,6 +13,7 @@ import ClaudeEditorScreen from './src/screens/ClaudeEditorScreen';
 import AgentSettingsScreen from './src/screens/AgentSettingsScreen';
 import SkillSettingsScreen from './src/screens/SkillSettingsScreen';
 import TermuxSettingsScreen from './src/screens/TermuxSettingsScreen';
+import TerminalScreen from './src/screens/TerminalScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -67,6 +68,16 @@ const App = () => {
               name="TermuxSettings"
               component={TermuxSettingsScreen}
               options={{ title: 'Termux 설정' }}
+            />
+            <Stack.Screen
+              name="Terminal"
+              component={TerminalScreen}
+              options={{
+                title: '터미널',
+                headerStyle: {
+                  backgroundColor: '#1e1e1e',
+                },
+              }}
             />
           </Stack.Navigator>
         </NavigationContainer>

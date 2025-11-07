@@ -24,6 +24,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       onPress: () => navigation.navigate('ProjectList'),
     },
     {
+      title: '터미널',
+      description: '내장 터미널에서 명령어를 실행합니다',
+      icon: '💻',
+      onPress: () => navigation.navigate('Terminal'),
+    },
+    {
       title: 'Termux 설정',
       description: 'Termux 환경을 구성하고 관리합니다',
       icon: '⚙️',
@@ -62,6 +68,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.featureItem}>✓ Agent 설정 및 활성화</Text>
           <Text style={styles.featureItem}>✓ Skills 커스터마이징</Text>
           <Text style={styles.featureItem}>✓ 프로젝트별 설정 관리</Text>
+          <Text style={styles.featureItem}>✓ 내장 터미널 (VS Code 스타일)</Text>
           <Text style={styles.featureItem}>✓ Termux 통합</Text>
         </View>
       </View>

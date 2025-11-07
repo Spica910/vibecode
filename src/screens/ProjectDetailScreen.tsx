@@ -131,6 +131,14 @@ This is a development project managed with Claude Code.
 
   const menuItems = [
     {
+      title: '터미널',
+      description: '프로젝트 디렉토리에서 터미널을 실행합니다',
+      icon: '💻',
+      available: true,
+      onPress: () => navigation.navigate('Terminal', { projectId, cwd: project.path }),
+      onInit: () => {},
+    },
+    {
       title: 'Claude.md 편집',
       description: 'Claude 설정 파일을 편집합니다',
       icon: '📝',
